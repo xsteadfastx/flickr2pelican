@@ -65,14 +65,19 @@ def test_optimize(mock_flickr_api, mock_exists_local, mock_subprocess, tmpdir):
     )
 
 
-@patch("flickr2pelican.photo.subprocess")
 @patch("flickr2pelican.photo.logger")
 @patch("flickr2pelican.photo.FlickrPhoto.exists_local", new_callable=PropertyMock)
-def test_optimize_file_not_found(
-    mock_exists_local, mock_logger, mock_subprocess, tmpdir
-):
+def test_optimize_file_not_found(mock_exists_local, mock_logger, tmpdir):
     mock_exists_local.return_value = False
     flickr_photo = photo.FlickrPhoto("abc123", Path(tmpdir.strpath))
 
     flickr_photo.optimize()
     mock_logger.error.assert_called_with("No local file found: None")
+
+
+@patch("flickr2pelican.photo.flickr_api")
+def test_description(mock_flickr_api, tmpdir):
+    mock_flickr_api.Photo.return_value.getInfo.return_value = {"title": "my photo"}
+    flickr_photo = photo.FlickrPhoto("abc123", Path(tmpdir.strpath))
+
+    assert flickr_photo.description == "my photo"

@@ -70,3 +70,11 @@ class FlickrPhoto:
                 str(self.full_path),
             ]
         )
+
+    @property
+    def description(self) -> str:
+        """Photo description."""
+        if not self.api_photo:
+            self.get_flickr_data()
+        # pylint: disable=invalid-sequence-index
+        return self.api_photo.getInfo()["title"]
