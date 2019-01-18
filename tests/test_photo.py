@@ -17,11 +17,16 @@ def test_full_path(mock_flickr_api, tmpdir):
 def test_download(mock_flickr_api, tmpdir):
     mock_flickr_api.Photo.return_value.getInfo.return_value = {"secret": "s3cr37"}
     flickr_photo = photo.FlickrPhoto("abc123", Path(tmpdir.strpath))
+
+    assert flickr_photo.downloaded is False
+
     flickr_photo.download()
 
     mock_flickr_api.Photo.return_value.save.assert_called_with(
         tmpdir.join("abc123_s3cr37_b").strpath, size_label="Original"
     )
+
+    assert flickr_photo.downloaded is True
 
 
 @patch("flickr2pelican.photo.logger")
@@ -81,3 +86,18 @@ def test_description(mock_flickr_api, tmpdir):
     flickr_photo = photo.FlickrPhoto("abc123", Path(tmpdir.strpath))
 
     assert flickr_photo.description == "my photo"
+
+
+@patch("flickr2pelican.photo.FlickrPhoto.full_path", new_callable=PropertyMock)
+@patch("flickr2pelican.photo.FlickrPhoto.description", new_callable=PropertyMock)
+@patch("flickr2pelican.photo.flickr_api")
+def test_markdown(
+    mock_flickr_api, mock_description, mock_full_path, tmpdir
+):  # pylint: disable=unused-argument
+    mock_description.return_value = "this is a description"
+    mock_full_path.return_value = Path(tmpdir.join("foo_bar.jpg").strpath)
+    flickr_photo = photo.FlickrPhoto("abc123", Path(tmpdir.strpath))
+
+    assert (
+        flickr_photo.markdown == "![this is a description]({static}/images/foo_bar.jpg)"
+    )

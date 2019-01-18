@@ -1,7 +1,7 @@
 """Types and overall classes."""
 import subprocess
 from dataclasses import dataclass
-from pathlib import PosixPath
+from pathlib import Path
 from typing import Optional
 
 import flickr_api
@@ -16,9 +16,10 @@ class FlickrPhoto:
     """
 
     flickr_id: str
-    output_dir: PosixPath
-    local_file: Optional[PosixPath] = None
+    output_dir: Path
+    local_file: Optional[Path] = None
     api_photo: flickr_api.objects.Photo = None
+    downloaded: bool = False
 
     def get_flickr_data(self) -> None:
         """Getting Photo informations from flickr."""
@@ -26,7 +27,7 @@ class FlickrPhoto:
         self.api_photo = flickr_api.Photo(id=self.flickr_id)
 
     @property
-    def full_path(self) -> PosixPath:
+    def full_path(self) -> Path:
         """Full local path."""
         if not self.api_photo:
             self.get_flickr_data()
@@ -47,6 +48,7 @@ class FlickrPhoto:
         if not self.exists_local:
             logger.info(f"Download image: {self.flickr_id}")
             self.api_photo.save(final_file, size_label="Original")
+            self.downloaded = True
         else:
             logger.info(f"{self.full_path} already exists!")
 
@@ -78,3 +80,8 @@ class FlickrPhoto:
             self.get_flickr_data()
         # pylint: disable=invalid-sequence-index
         return self.api_photo.getInfo()["title"]
+
+    @property
+    def markdown(self) -> str:
+        """Create markdown snippet."""
+        return f"![{self.description}]" "({static}/images/" f"{self.full_path.name}" ")"

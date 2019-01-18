@@ -1,7 +1,6 @@
 # pylint: disable=missing-docstring
-from click.testing import CliRunner
-
 import pytest
+from click.testing import CliRunner
 
 
 @pytest.fixture
