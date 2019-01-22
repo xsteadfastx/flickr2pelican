@@ -1,6 +1,7 @@
 # pylint: disable=missing-docstring,redefined-outer-name
+import http
 from pathlib import Path
-from unittest.mock import PropertyMock, patch
+from unittest.mock import PropertyMock, call, patch
 
 from flickr2pelican import photo
 
@@ -43,6 +44,88 @@ def test_download_file_exists(mock_flickr_api, mock_exists_local, mock_logger, t
     mock_logger.info.assert_called_with(
         f"{tmpdir.strpath}/abc123_s3cr37_b.jpg already exists!"
     )
+
+
+@patch("flickr2pelican.photo.logger")
+@patch("flickr2pelican.photo.FlickrPhoto.exists_local", new_callable=PropertyMock)
+@patch("flickr2pelican.photo.flickr_api")
+def test_download_incomplete_read(
+    mock_flickr_api, mock_exists_local, mock_logger, tmpdir
+):
+    mock_exists_local.return_value = False
+    mock_flickr_api.Photo.return_value.save.side_effect = [
+        http.client.IncompleteRead("foo bar"),
+        True,
+    ]
+    mock_flickr_api.Photo.return_value.getInfo.return_value = {"secret": "s3cr37"}
+    Path(tmpdir.join("abc123_s3cr37_b.jpg").strpath).touch()
+    flickr_photo = photo.FlickrPhoto("abc123", Path(tmpdir.strpath))
+
+    flickr_photo.download()
+
+    mock_flickr_api.Photo.return_value.save.assert_has_calls(
+        [
+            call(tmpdir.join("abc123_s3cr37_b").strpath, size_label="Original"),
+            call(tmpdir.join("abc123_s3cr37_b").strpath, size_label="Original"),
+        ]
+    )
+
+    mock_logger.error.assert_has_calls([call("incomplete download. will try again...")])
+
+    mock_logger.debug.assert_has_calls(
+        [
+            call("getting flickr data for id: abc123"),
+            call("removed {}".format(tmpdir.join("abc123_s3cr37_b.jpg").strpath)),
+            call("raised counter to 1"),
+        ]
+    )
+
+
+@patch("flickr2pelican.photo.logger")
+@patch("flickr2pelican.photo.FlickrPhoto.exists_local", new_callable=PropertyMock)
+@patch("flickr2pelican.photo.flickr_api")
+def test_download_exception(mock_flickr_api, mock_exists_local, mock_logger, tmpdir):
+    mock_exists_local.return_value = False
+    mock_flickr_api.Photo.return_value.save.side_effect = [KeyError("foo bar"), True]
+    mock_flickr_api.Photo.return_value.getInfo.return_value = {"secret": "s3cr37"}
+    Path(tmpdir.join("abc123_s3cr37_b.jpg").strpath).touch()
+    flickr_photo = photo.FlickrPhoto("abc123", Path(tmpdir.strpath))
+
+    flickr_photo.download()
+
+    mock_flickr_api.Photo.return_value.save.assert_has_calls(
+        [
+            call(tmpdir.join("abc123_s3cr37_b").strpath, size_label="Original"),
+            call(tmpdir.join("abc123_s3cr37_b").strpath, size_label="Original"),
+        ]
+    )
+
+    mock_logger.error.assert_called_with("catched error. will try again...")
+
+
+@patch("flickr2pelican.photo.FlickrPhoto.api_photo", new_callable=PropertyMock)
+@patch("flickr2pelican.photo.FlickrPhoto.local_file", new_callable=PropertyMock)
+@patch("flickr2pelican.photo.logger")
+def test_download_exception_in_exception(
+    mock_logger, mock_local_file, mock_api_photo, tmpdir
+):
+    test_image = Path(tmpdir.join("foo_bar.jpg").strpath)
+    mock_local_file.return_value = test_image
+    mock_api_photo.return_value.save.side_effect = [KeyError("foo bar"), True]
+    flickr_photo = photo.FlickrPhoto("abc124", Path(tmpdir.strpath))
+    flickr_photo.download()
+
+    mock_logger.exception.assert_has_calls = [
+        call(KeyError("foo bar")),
+        call(FileNotFoundError(2, "No such file or directory")),
+    ]
+
+    mock_logger.error.assert_has_calls = [call("catched error. will try again...")]
+
+    mock_logger.info.assert_has_calls = [
+        call(f"Download image: abc123 to {test_image}"),
+        call(f"Download image: abc123 to {test_image}"),
+    ]
 
 
 @patch("flickr2pelican.photo.subprocess")

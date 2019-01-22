@@ -1,6 +1,7 @@
 """Types and overall classes."""
 import subprocess
 from dataclasses import dataclass
+from http.client import IncompleteRead
 from pathlib import Path
 from typing import Optional
 
@@ -46,9 +47,30 @@ class FlickrPhoto:
             self.local_file = self.full_path
         final_file = str(self.output_dir / self.local_file.stem)
         if not self.exists_local:
-            logger.info(f"Download image: {self.flickr_id}")
-            self.api_photo.save(final_file, size_label="Original")
-            self.downloaded = True
+            download_counter = 0
+            while download_counter < 5 and self.downloaded is False:
+                try:
+                    logger.info(
+                        f"Download image: {self.flickr_id} to {self.local_file}"
+                    )
+                    self.api_photo.save(final_file, size_label="Original")
+                    self.downloaded = True
+                except IncompleteRead:
+                    logger.error("incomplete download. will try again...")
+                    self.local_file.unlink()
+                    logger.debug(f"removed {self.local_file}")
+                    download_counter += 1
+                    logger.debug(f"raised counter to {download_counter}")
+                except BaseException as exception:
+                    logger.exception(exception)
+                    logger.error("catched error. will try again...")
+                    try:
+                        self.local_file.unlink()
+                        logger.debug(f"removed {self.local_file}")
+                    except BaseException as exception:
+                        logger.exception(exception)
+                    download_counter += 1
+                    logger.debug(f"raised counter to {download_counter}")
         else:
             logger.info(f"{self.full_path} already exists!")
 
@@ -77,6 +99,7 @@ class FlickrPhoto:
     def description(self) -> str:
         """Photo description."""
         if not self.api_photo:
+            logger.debug("no flickr data")
             self.get_flickr_data()
         # pylint: disable=invalid-sequence-index
         return self.api_photo.getInfo()["title"]
