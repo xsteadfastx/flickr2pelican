@@ -9,7 +9,8 @@ steps:
       - name: docker_sock
         path: /var/run/docker.sock
     commands:
-      - docker build --no-cache -t flickr2pelican-tests:${DRONE_COMMIT} -f Dockerfile.tests .
+      #- docker build --no-cache -t flickr2pelican-tests:${DRONE_COMMIT} -f Dockerfile.tests .
+      - docker build -t flickr2pelican-tests:${DRONE_COMMIT} -f Dockerfile.tests .
 
   - name: permissions
     image: flickr2pelican-tests:${DRONE_COMMIT}
