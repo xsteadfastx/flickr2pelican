@@ -16,6 +16,15 @@ steps:
     environment:
       TOX_WORK_DIR: /tmp/tox
     commands:
+      - whoami
+      - id
+      - ls -la
+
+  - name: py37
+    image: flickr2pelican-tests:${DRONE_COMMIT}
+    environment:
+      TOX_WORK_DIR: /tmp/tox
+    commands:
       - tox -e py37
 
   - name: flake8
