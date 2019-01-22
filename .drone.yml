@@ -13,12 +13,9 @@ steps:
       - docker build -t flickr2pelican-tests:${DRONE_COMMIT} -f Dockerfile.tests .
 
   - name: permissions
-    image: flickr2pelican-tests:${DRONE_COMMIT}
-    docker:
-      user: root
+    image: alpine:edge
     commands:
-      - whoami
-      #- chown -Rv 1000:1000 .
+      - chown -Rv 1000:1000 .
 
   - name: py37
     image: flickr2pelican-tests:${DRONE_COMMIT}
