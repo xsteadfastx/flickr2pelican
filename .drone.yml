@@ -11,7 +11,7 @@ steps:
     commands:
       - docker build --no-cache -t flickr2pelican-tests:${DRONE_COMMIT} -f Dockerfile.tests .
 
-  - name: py37
+  - name: foo
     image: flickr2pelican-tests:${DRONE_COMMIT}
     environment:
       TOX_WORK_DIR: /tmp/tox
