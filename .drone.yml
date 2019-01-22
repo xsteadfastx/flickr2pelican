@@ -17,7 +17,8 @@ steps:
     docker:
       user: root
     commands:
-      - chown -Rv 1000:1000 .
+      - whoami
+      #- chown -Rv 1000:1000 .
 
   - name: py37
     image: flickr2pelican-tests:${DRONE_COMMIT}
