@@ -11,20 +11,12 @@ steps:
     commands:
       - docker build --no-cache -t flickr2pelican-tests:${DRONE_COMMIT} -f Dockerfile.tests .
 
-  - name: foo
-    image: flickr2pelican-tests:${DRONE_COMMIT}
-    environment:
-      TOX_WORK_DIR: /tmp/tox
-    commands:
-      - whoami
-      - id
-      - ls -la
-
   - name: py37
     image: flickr2pelican-tests:${DRONE_COMMIT}
     environment:
       TOX_WORK_DIR: /tmp/tox
     commands:
+      - chown -Rv 1000:1000 .
       - tox -e py37
 
   - name: flake8
@@ -32,6 +24,7 @@ steps:
     environment:
       TOX_WORK_DIR: /tmp/tox
     commands:
+      - chown -Rv 1000:1000 .
       - tox -e flake8
 
   - name: pylint
@@ -39,6 +32,7 @@ steps:
     environment:
       TOX_WORK_DIR: /tmp/tox
     commands:
+      - chown -Rv 1000:1000 .
       - tox -e pylint
 
   - name: black
@@ -46,6 +40,7 @@ steps:
     environment:
       TOX_WORK_DIR: /tmp/tox
     commands:
+      - chown -Rv 1000:1000 .
       - tox -e black-only-check
 
 volumes:
