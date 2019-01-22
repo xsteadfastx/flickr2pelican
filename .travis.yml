@@ -4,6 +4,7 @@ services:
   - docker
 env:
   - TOXENV=py37
+  - TOXENV=coverage
   - TOXENV=flake8
   - TOXENV=pylint
   - TOXENV=mypy
