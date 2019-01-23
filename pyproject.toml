@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "flickr2pelican"
-version = "0.0.0"
+version = "0.1.0"
 description = "Downloads flickr images, optimizes them and creates markdown code"
 authors = ["Marvin Steadfast <marvin@xsteadfastx.org>"]
 readme = "README.md"

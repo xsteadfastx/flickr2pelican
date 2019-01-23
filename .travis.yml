@@ -10,7 +10,7 @@ env:
   - TOXENV=mypy
   - TOXENV=black-only-check
 before_install:
-  - docker build --no-cache -t flickr2pelican-tests -f Dockerfile.tests .
+  - docker build -t flickr2pelican-tests -f Dockerfile.tests .
 script:
   - sudo chown -R 1000:1000 .
   - docker run --rm -t -v $PWD:/data -w /data -e TOX_WORK_DIR=/tmp flickr2pelican-tests tox -v -e $TOXENV
