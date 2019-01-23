@@ -37,5 +37,8 @@ def main(username: str, local_dir: str, number: int) -> None:
     flickr_user = core.get_user(username)
     photos = core.get_latest_photos(flickr_user, number, Path(local_dir))
     core.download_n_optimize(photos)
-    for photo in photos:
-        click.echo(photo.markdown)
+    markdowns = [i.markdown for i in photos]
+
+    click.secho("---BEGIN MARKDOWN---\n", bold=True)
+    click.echo("\n\n".join(markdowns))
+    click.secho("\n---END MARKDOWN---", bold=True)
