@@ -37,6 +37,13 @@ steps:
     commands:
       - tox -e pylint
 
+  - name: mypy
+    image: flickr2pelican-tests:${DRONE_COMMIT}
+    environment:
+      TOX_WORK_DIR: /tmp/tox
+    commands:
+      - tox -e mypy
+
   - name: black
     image: flickr2pelican-tests:${DRONE_COMMIT}
     environment:
