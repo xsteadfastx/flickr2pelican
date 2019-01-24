@@ -51,6 +51,23 @@ steps:
     commands:
       - tox -e black-only-check
 
+  - name: publish
+    image: flickr2pelican-tests:${DRONE_COMMIT}
+    environment:
+      REPO:
+        from_secret: REPO
+      USERNAME:
+        from_secret: USERNAME
+      PASSWORD:
+        from_secret: PASSWORD
+    commands:
+      - poetry config repositories.ownrepo $REPO
+      - poetry build
+      - poetry publish -r ownrepo -u $USERNAME -p $PASSWORD
+    when:
+      event:
+        - tag
+
 volumes:
   - name: docker_sock
     host:
