@@ -1,4 +1,4 @@
-FROM xsteadfastx/tox-python
+FROM xsteadfastx/tox-python:ubuntu
 
 RUN set -ex \
  && pip3.7 install poetry \
