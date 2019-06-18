@@ -1,4 +1,4 @@
-# pylint: disable=missing-docstring,redefined-outer-name
+# pylint: disable=missing-docstring,redefined-outer-name,too-many-arguments
 from pathlib import Path
 from unittest.mock import Mock, call, patch, sentinel
 
@@ -13,6 +13,8 @@ def test_main_pelicanconf(
     mock_pelicanconf = Mock()
     mock_pelicanconf.FLICKR_USERNAME = "foobar"
     mock_pelicanconf.FLICKR_IMAGE_PATH = tmpdir.strpath
+    mock_pelicanconf.FLICKR_API_KEY = "apikey"
+    mock_pelicanconf.FLICKR_API_SECRET = "apisecret"
 
     with patch.dict("sys.modules", pelicanconf=mock_pelicanconf):
         result = runner.invoke(cli.main, ["10"])
@@ -20,15 +22,20 @@ def test_main_pelicanconf(
     assert mock_logger.debug.call_args_list == [
         call("uses username: foobar"),
         call(f"uses local_dir: {tmpdir.strpath}"),
+        call("uses key: apikey"),
+        call("uses secret: apisecret"),
     ]
     assert result.exit_code == 0
 
 
+@patch("flickr2pelican.cli.flickr_api")
 @patch("flickr2pelican.cli.core")
 @patch("flickr2pelican.cli.click.prompt")
 @patch("flickr2pelican.cli.click.echo")
-def test_main_prompt(mock_echo, mock_prompt, mock_core, runner, tmpdir):
-    mock_prompt.side_effect = ["barfoo", tmpdir.strpath]
+def test_main_prompt(
+    mock_echo, mock_prompt, mock_core, mock_flickr_api, runner, tmpdir
+):
+    mock_prompt.side_effect = ["barfoo", tmpdir.strpath, "apikey", "apisecret"]
     mock_core.get_user.return_value = sentinel.flickr_user
     test_photo = sentinel.foto
     test_photo.markdown = "foo"
@@ -39,9 +46,9 @@ def test_main_prompt(mock_echo, mock_prompt, mock_core, runner, tmpdir):
 
     assert result.exit_code == 0
     mock_prompt.assert_has_calls([call("flickr username"), call("local dir")])
-    mock_core.get_user.assert_called_with("barfoo")
+    mock_core.get_user.assert_called_with("barfoo", mock_flickr_api)
     mock_core.get_latest_photos.assert_called_with(
-        sentinel.flickr_user, 10, Path(tmpdir.strpath)
+        sentinel.flickr_user, 10, Path(tmpdir.strpath), mock_flickr_api
     )
     mock_core.download_n_optimize.assert_called_with(mock_photos)
 

@@ -1,29 +1,29 @@
 # pylint: disable=missing-docstring,redefined-outer-name
 import http
 from pathlib import Path
-from unittest.mock import PropertyMock, call, patch
+from unittest.mock import Mock, PropertyMock, call, patch
 
 from flickr2pelican import photo
 
 
-@patch("flickr2pelican.photo.flickr_api")
-def test_full_path(mock_flickr_api, tmpdir):
-    mock_flickr_api.Photo.return_value.getInfo.return_value = {"secret": "s3cr37"}
-    flickr_photo = photo.FlickrPhoto("abc123", tmpdir)
+def test_full_path(tmpdir):
+    mock_flickr_mod = Mock()
+    mock_flickr_mod.Photo.return_value.getInfo.return_value = {"secret": "s3cr37"}
+    flickr_photo = photo.FlickrPhoto("abc123", tmpdir, mock_flickr_mod)
 
     assert flickr_photo.full_path == tmpdir / f"abc123_s3cr37_b.jpg"
 
 
-@patch("flickr2pelican.photo.flickr_api")
-def test_download(mock_flickr_api, tmpdir):
-    mock_flickr_api.Photo.return_value.getInfo.return_value = {"secret": "s3cr37"}
-    flickr_photo = photo.FlickrPhoto("abc123", Path(tmpdir.strpath))
+def test_download(tmpdir):
+    mock_flickr_mod = Mock()
+    mock_flickr_mod.Photo.return_value.getInfo.return_value = {"secret": "s3cr37"}
+    flickr_photo = photo.FlickrPhoto("abc123", Path(tmpdir.strpath), mock_flickr_mod)
 
     assert flickr_photo.downloaded is False
 
     flickr_photo.download()
 
-    mock_flickr_api.Photo.return_value.save.assert_called_with(
+    mock_flickr_mod.Photo.return_value.save.assert_called_with(
         tmpdir.join("abc123_s3cr37_b").strpath, size_label="Original"
     )
 
@@ -32,14 +32,14 @@ def test_download(mock_flickr_api, tmpdir):
 
 @patch("flickr2pelican.photo.logger")
 @patch("flickr2pelican.photo.FlickrPhoto.exists_local", new_callable=PropertyMock)
-@patch("flickr2pelican.photo.flickr_api")
-def test_download_file_exists(mock_flickr_api, mock_exists_local, mock_logger, tmpdir):
+def test_download_file_exists(mock_exists_local, mock_logger, tmpdir):
     mock_exists_local.return_value = True
-    mock_flickr_api.Photo.return_value.getInfo.return_value = {"secret": "s3cr37"}
-    flickr_photo = photo.FlickrPhoto("abc123", Path(tmpdir.strpath))
+    mock_flickr_mod = Mock()
+    mock_flickr_mod.Photo.return_value.getInfo.return_value = {"secret": "s3cr37"}
+    flickr_photo = photo.FlickrPhoto("abc123", Path(tmpdir.strpath), mock_flickr_mod)
     flickr_photo.download()
 
-    mock_flickr_api.Photo.return_value.save.assert_not_called()
+    mock_flickr_mod.Photo.return_value.save.assert_not_called()
 
     mock_logger.info.assert_called_with(
         f"{tmpdir.strpath}/abc123_s3cr37_b.jpg already exists!"
@@ -48,22 +48,20 @@ def test_download_file_exists(mock_flickr_api, mock_exists_local, mock_logger, t
 
 @patch("flickr2pelican.photo.logger")
 @patch("flickr2pelican.photo.FlickrPhoto.exists_local", new_callable=PropertyMock)
-@patch("flickr2pelican.photo.flickr_api")
-def test_download_incomplete_read(
-    mock_flickr_api, mock_exists_local, mock_logger, tmpdir
-):
+def test_download_incomplete_read(mock_exists_local, mock_logger, tmpdir):
     mock_exists_local.return_value = False
-    mock_flickr_api.Photo.return_value.save.side_effect = [
+    mock_flickr_mod = Mock()
+    mock_flickr_mod.Photo.return_value.save.side_effect = [
         http.client.IncompleteRead("foo bar"),
         True,
     ]
-    mock_flickr_api.Photo.return_value.getInfo.return_value = {"secret": "s3cr37"}
+    mock_flickr_mod.Photo.return_value.getInfo.return_value = {"secret": "s3cr37"}
     Path(tmpdir.join("abc123_s3cr37_b.jpg").strpath).touch()
-    flickr_photo = photo.FlickrPhoto("abc123", Path(tmpdir.strpath))
+    flickr_photo = photo.FlickrPhoto("abc123", Path(tmpdir.strpath), mock_flickr_mod)
 
     flickr_photo.download()
 
-    mock_flickr_api.Photo.return_value.save.assert_has_calls(
+    mock_flickr_mod.Photo.return_value.save.assert_has_calls(
         [
             call(tmpdir.join("abc123_s3cr37_b").strpath, size_label="Original"),
             call(tmpdir.join("abc123_s3cr37_b").strpath, size_label="Original"),
@@ -83,17 +81,17 @@ def test_download_incomplete_read(
 
 @patch("flickr2pelican.photo.logger")
 @patch("flickr2pelican.photo.FlickrPhoto.exists_local", new_callable=PropertyMock)
-@patch("flickr2pelican.photo.flickr_api")
-def test_download_exception(mock_flickr_api, mock_exists_local, mock_logger, tmpdir):
+def test_download_exception(mock_exists_local, mock_logger, tmpdir):
     mock_exists_local.return_value = False
-    mock_flickr_api.Photo.return_value.save.side_effect = [KeyError("foo bar"), True]
-    mock_flickr_api.Photo.return_value.getInfo.return_value = {"secret": "s3cr37"}
+    mock_flickr_mod = Mock()
+    mock_flickr_mod.Photo.return_value.save.side_effect = [KeyError("foo bar"), True]
+    mock_flickr_mod.Photo.return_value.getInfo.return_value = {"secret": "s3cr37"}
     Path(tmpdir.join("abc123_s3cr37_b.jpg").strpath).touch()
-    flickr_photo = photo.FlickrPhoto("abc123", Path(tmpdir.strpath))
+    flickr_photo = photo.FlickrPhoto("abc123", Path(tmpdir.strpath), mock_flickr_mod)
 
     flickr_photo.download()
 
-    mock_flickr_api.Photo.return_value.save.assert_has_calls(
+    mock_flickr_mod.Photo.return_value.save.assert_has_calls(
         [
             call(tmpdir.join("abc123_s3cr37_b").strpath, size_label="Original"),
             call(tmpdir.join("abc123_s3cr37_b").strpath, size_label="Original"),
@@ -112,7 +110,7 @@ def test_download_exception_in_exception(
     test_image = Path(tmpdir.join("foo_bar.jpg").strpath)
     mock_local_file.return_value = test_image
     mock_api_photo.return_value.save.side_effect = [KeyError("foo bar"), True]
-    flickr_photo = photo.FlickrPhoto("abc124", Path(tmpdir.strpath))
+    flickr_photo = photo.FlickrPhoto("abc124", Path(tmpdir.strpath), Mock())
     flickr_photo.download()
 
     mock_logger.exception.assert_has_calls = [
@@ -130,11 +128,11 @@ def test_download_exception_in_exception(
 
 @patch("flickr2pelican.photo.subprocess")
 @patch("flickr2pelican.photo.FlickrPhoto.exists_local", new_callable=PropertyMock)
-@patch("flickr2pelican.photo.flickr_api")
-def test_optimize(mock_flickr_api, mock_exists_local, mock_subprocess, tmpdir):
+def test_optimize(mock_exists_local, mock_subprocess, tmpdir):
     mock_exists_local.return_value = True
-    mock_flickr_api.Photo.return_value.getInfo.return_value = {"secret": "s3cr37"}
-    flickr_photo = photo.FlickrPhoto("abc123", Path(tmpdir.strpath))
+    mock_flickr_mod = Mock()
+    mock_flickr_mod.Photo.return_value.getInfo.return_value = {"secret": "s3cr37"}
+    flickr_photo = photo.FlickrPhoto("abc123", Path(tmpdir.strpath), mock_flickr_mod)
     flickr_photo.optimize()
 
     mock_subprocess.run.assert_called_with(
@@ -157,29 +155,28 @@ def test_optimize(mock_flickr_api, mock_exists_local, mock_subprocess, tmpdir):
 @patch("flickr2pelican.photo.FlickrPhoto.exists_local", new_callable=PropertyMock)
 def test_optimize_file_not_found(mock_exists_local, mock_logger, tmpdir):
     mock_exists_local.return_value = False
-    flickr_photo = photo.FlickrPhoto("abc123", Path(tmpdir.strpath))
+    flickr_photo = photo.FlickrPhoto("abc123", Path(tmpdir.strpath), Mock())
 
     flickr_photo.optimize()
     mock_logger.error.assert_called_with("No local file found: None")
 
 
-@patch("flickr2pelican.photo.flickr_api")
-def test_description(mock_flickr_api, tmpdir):
-    mock_flickr_api.Photo.return_value.getInfo.return_value = {"title": "my photo"}
-    flickr_photo = photo.FlickrPhoto("abc123", Path(tmpdir.strpath))
+def test_description(tmpdir):
+    mock_flickr_mod = Mock()
+    mock_flickr_mod.Photo.return_value.getInfo.return_value = {"title": "my photo"}
+    flickr_photo = photo.FlickrPhoto("abc123", Path(tmpdir.strpath), mock_flickr_mod)
 
     assert flickr_photo.description == "my photo"
 
 
 @patch("flickr2pelican.photo.FlickrPhoto.full_path", new_callable=PropertyMock)
 @patch("flickr2pelican.photo.FlickrPhoto.description", new_callable=PropertyMock)
-@patch("flickr2pelican.photo.flickr_api")
 def test_markdown(
-    mock_flickr_api, mock_description, mock_full_path, tmpdir
+    mock_description, mock_full_path, tmpdir
 ):  # pylint: disable=unused-argument
     mock_description.return_value = "this is a description"
     mock_full_path.return_value = Path(tmpdir.join("foo_bar.jpg").strpath)
-    flickr_photo = photo.FlickrPhoto("abc123", Path(tmpdir.strpath))
+    flickr_photo = photo.FlickrPhoto("abc123", Path(tmpdir.strpath), Mock())
 
     assert (
         flickr_photo.markdown == "![this is a description]({static}/images/foo_bar.jpg)"

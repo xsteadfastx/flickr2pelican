@@ -18,6 +18,7 @@ class FlickrPhoto:
 
     flickr_id: str
     output_dir: Path
+    flickr_mod: flickr_api
     local_file: Optional[Path] = None
     api_photo: flickr_api.objects.Photo = None
     downloaded: bool = False
@@ -25,7 +26,7 @@ class FlickrPhoto:
     def get_flickr_data(self) -> None:
         """Getting Photo informations from flickr."""
         logger.debug(f"getting flickr data for id: {self.flickr_id}")
-        self.api_photo = flickr_api.Photo(id=self.flickr_id)
+        self.api_photo = self.flickr_mod.Photo(id=self.flickr_id)
 
     @property
     def full_path(self) -> Path:
